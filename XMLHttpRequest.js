@@ -7,7 +7,8 @@ function sendData(full_endpoint, method, data) {
   } else if (method === 'GET') {
     var str = '?'
     Object.keys(data).forEach((key, index) => {
-       str = str + key + '=' + JSON.stringify(data[key])  + '&'
+      str = str + key + '=' + '&'
+      // str = str + key + '=' + JSON.stringify(data[key])  + '&'
     });
     xhr.open('GET', full_endpoint + str.slice(0, -1));
     xhr.withCredentials = true;
