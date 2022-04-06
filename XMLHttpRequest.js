@@ -20,7 +20,8 @@ function sendData(full_endpoint, method, data) {
 
 function stringifyKey(obj){
   if (typeof obj === 'object' && obj !== null) {
-    JSON.stringify(obj)
-  } else
-  return obj
+    return JSON.stringify(obj)
+  } else {
+    return obj
+  }
 }
