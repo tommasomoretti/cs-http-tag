@@ -8,12 +8,19 @@ function sendData(full_endpoint, method, data) {
   } else if (method === 'GET') {
     var str = '?'
     Object.keys(data).forEach((key, index) => {
-      str = str + key + '=' + JSON.stringify(data[key])  + '&'
+      str = str + key + '=' + stringifyKey(data[key])  + '&'
     });
     str = str.slice(0, -1);
     console.log(str);
     xhr.open('GET', full_endpoint + str);
     xhr.withCredentials = true;
-    xhr.send();
+    xhr.send(JSON.stringify(data));
   }
+}
+
+function stringifyKey(obj){
+  if (typeof obj === 'object' && obj !== null) {
+    JSON.stringify(obj)
+  } else
+  return obj
 }
