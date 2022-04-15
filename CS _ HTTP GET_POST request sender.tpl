@@ -218,24 +218,20 @@ ___TEMPLATE_PARAMETERS___
 ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
 const log = require('logToConsole');
-const encodeUri = require ('encodeUri');
 const getTimestampMillis = require('getTimestampMillis');
 const queryPermission = require('queryPermission');
 const injectScript = require('injectScript');
 const callInWindow = require('callInWindow');
 const copyFromWindow = require('copyFromWindow');
-const Object = require('Object');
-const sendPixel = require('sendPixel');
-const JSON = require('JSON');
 const getUrl = require('getUrl');
 const readTitle = require('readTitle');
 const getReferrerUrl = require('getReferrerUrl');
-const encodeUriComponent = require('encodeUriComponent');
+const isConsentGranted = require('isConsentGranted');
 
-
-const script_url = 'https://rawcdn.githack.com/tommasomoretti/cs-gtm-tag/69efc19f60f92a9ea8d78dc94ead3c897f221a2b/request-handler.js?min=1';
 
 if(data.enable_logs){log('CLIENT-SIDE GTM TAG: TAG CONFIGURATION');}
+
+const script_url = 'https://rawcdn.githack.com/tommasomoretti/cs-http-tag/9471f8feee209bfd3544801fa1940ce796a52063/XMLHttpRequest.js';
 
 const domain = data.domain_name;
 if(data.enable_logs){log('👉 Endpoint domain:', domain);}
@@ -266,81 +262,47 @@ if (data.event_type === 'dataLayer') {
     const dataLayer = dataLayer_data[dataLayer_data.length -1]; 
     const event_name = dataLayer.event;
         
-    // POST 
-    if(request_method === 'POST'){
-      payload_obj.event_name = event_name;
-      if(data.add_timestamp){payload_obj[timestamp_param_name] = timestamp;}
-      payload_obj.dataLayer = dataLayer;
-      // payload_obj.page_location = getUrl();
-      // payload_obj.page_hostname = getUrl('host');
-      // payload_obj.page_path = getUrl('path');
-      // payload_obj.page_referrer = getReferrerUrl();
-      payload_obj.page_title = readTitle();  
-      
-      if(data.enable_logs){log('👉 Request endpoint:', full_endpoint);}
-      if(data.enable_logs){log('👉 Request payload:', payload_obj);}
-      send_request(full_endpoint, request_method, payload_obj);
-      
-    // GET
-    } else if(request_method === 'GET') {
-      payload_url = '?' +
-        'event_name=' + event_name +
-        add_timestamp() +
-        '&dataLayer=' + JSON.stringify(dataLayer) + 
-        // '&page_location=' + getUrl() + 
-        // '&page_hostname=' + getUrl('host') +
-        // '&page_path=' + getUrl('path') +
-        // '&page_referrer=' + getReferrerUrl()+
-        '&page_title=' + readTitle();
-      if(data.enable_logs){log('👉 Request endpoint:', full_endpoint);}
-      if(data.enable_logs){log('👉 Request payload:', payload_url);}
-      send_request(full_endpoint, request_method, payload_url);
-    }
+    payload_obj.event_name = event_name;
+    if(data.add_timestamp){payload_obj[timestamp_param_name] = timestamp;}
+    
+    payload_obj.dataLayer = dataLayer;
+    payload_obj.page_location = getUrl();
+    payload_obj.page_hostname = getUrl('host');
+    payload_obj.page_path = getUrl('path');
+    payload_obj.page_referrer = getReferrerUrl();
+    payload_obj.page_title = readTitle();  
+    
+    if(data.enable_logs){log('👉 Request endpoint:', full_endpoint);}
+    if(data.enable_logs){log('👉 Request payload:', payload_obj);}
+    send_request(full_endpoint, request_method, payload_obj);
   }
   
 // Custom event mode
 } else {
   const event_name = data.event_name;
+  
   payload_obj.event_name = event_name;
   if(data.add_timestamp){payload_obj[data.timestamp_param_name] = timestamp;}
   
   const event_params = data.event_parameters;
-  
-  // POST
-  if(request_method === 'POST'){
-    if (event_params != undefined) {
-      for (let i = 0; i < event_params.length; i++) {
-        const name = event_params[i].param_name;
-        const value = event_params[i].param_value;
-        payload_obj[name] = value;
-      }
+
+  if (event_params != undefined) {
+    for (let i = 0; i < event_params.length; i++) {
+      const name = event_params[i].param_name;
+      const value = event_params[i].param_value;
+      payload_obj[name] = value;
     }
-  
-    if(data.enable_logs){log('👉 Request payload:', payload_obj);}
-    send_request(full_endpoint, request_method, payload_obj);
-  
-  // GET
-  } else if(request_method === 'GET') {
-    if (event_params != undefined) {
-      var temp = '';
-      var temp_payload = '';
-      for (let i = 0; i < event_params.length; i++) {
-        const name = event_params[i].param_name;
-        const value = event_params[i].param_value;
-        if(typeof(value) === 'object'){
-          temp = name + '=' + JSON.stringify(value);
-        } else {
-          temp = name + '=' + value; 
-        }
-        temp_payload += '&' + temp;
-      }
-    }
-    
-    payload_url = '?' + 'event_name=' + event_name + add_timestamp() + temp_payload;
-    if(data.enable_logs){log('👉 Request endpoint:', full_endpoint);}
-    if(data.enable_logs){log('👉 Request payload:', payload_url);}
-    send_request(full_endpoint, request_method, payload_url);
   }
+    
+  payload_obj.page_location = getUrl();
+  payload_obj.page_hostname = getUrl('host');
+  payload_obj.page_path = getUrl('path');
+  payload_obj.page_referrer = getReferrerUrl();
+  payload_obj.page_title = readTitle();
+  
+  if(data.enable_logs){log('👉 Request endpoint:', full_endpoint);}
+  if(data.enable_logs){log('👉 Request payload:', payload_obj);}
+  send_request(full_endpoint, request_method, payload_obj);
 }
 
 
@@ -351,31 +313,29 @@ function send_request(endpoint, request_method, payload){
       script_url,
       () => {
         if(queryPermission('access_globals', 'execute', 'sendData')) {
-          callInWindow('sendData', endpoint, request_method, payload);
-          if(data.enable_logs){log('🟢 ' + request_method + ' request sent succesfully');}
-          data.gtmOnSuccess();
+          if(isConsentGranted('analytics_storage')){
+            callInWindow('sendData', endpoint, request_method, payload);
+            if(data.enable_logs){log('🟢 Consent mode: analytics_storage granted.');}
+            if(data.enable_logs){log('🟢 ' + request_method + ' request sent succesfully.');}
+            data.gtmOnSuccess();
+          } else {
+            if(data.enable_logs){log('🔴 Consent mode: analytics_storage denied.');}
+            if(data.enable_logs){log('🔴 ' + request_method + ' request not sent.');}
+            data.gtmOnFailure();
+          }
         }
       },
       () => {
-        if(data.enable_logs){log('🔴 ' + request_method + ' request not sent correctly.');}
         if(data.enable_logs){log('🔴 Script failed to load.');}
+        if(data.enable_logs){log('🔴 ' + request_method + ' request not sent correctly.');}
         data.gtmOnFailure();
       },
-      script_url
+      script_url // cache the external js
     );
   } else {
-    if(data.enable_logs){log('🔴 ' + request_method + ' request not sent correctly.');}
     if(data.enable_logs){log('🔴 Script failed to load due to permissions mismatch.');}
+    if(data.enable_logs){log('🔴 ' + request_method + ' request not sent correctly.');}
     data.gtmOnFailure();
-  }
-}
-
-// Add timestamp for get request
-function add_timestamp() {
-  if(data.add_timestamp){
-    return '&' + timestamp_param_name + '=' + timestamp;
-  } else {
-    return '';
   }
 }
 
@@ -418,7 +378,7 @@ ___WEB_PERMISSIONS___
             "listItem": [
               {
                 "type": 1,
-                "string": "https://rawcdn.githack.com/tommasomoretti/cs-gtm-tag/69efc19f60f92a9ea8d78dc94ead3c897f221a2b/request-handler.js?min\u003d1"
+                "string": "https://rawcdn.githack.com/tommasomoretti/cs-http-tag/9471f8feee209bfd3544801fa1940ce796a52063/XMLHttpRequest.js"
               }
             ]
           }
@@ -533,27 +493,6 @@ ___WEB_PERMISSIONS___
   {
     "instance": {
       "key": {
-        "publicId": "send_pixel",
-        "versionId": "1"
-      },
-      "param": [
-        {
-          "key": "allowedUrls",
-          "value": {
-            "type": 1,
-            "string": "any"
-          }
-        }
-      ]
-    },
-    "clientAnnotations": {
-      "isEditedByUser": true
-    },
-    "isRequired": true
-  },
-  {
-    "instance": {
-      "key": {
         "publicId": "read_title",
         "versionId": "1"
       },
@@ -616,20 +555,71 @@ ___WEB_PERMISSIONS___
       "isEditedByUser": true
     },
     "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "access_consent",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "consentTypes",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "consentType"
+                  },
+                  {
+                    "type": 1,
+                    "string": "read"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "analytics_storage"
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": false
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
   }
 ]
 
 
 ___TESTS___
 
-scenarios:
-- name: Quick Test
-  code: runCode();
+scenarios: []
 setup: ''
 
 
 ___NOTES___
 
-Created on 25/3/2022, 20:56:14
+Created on 15/4/2022, 18:22:12
 
 
