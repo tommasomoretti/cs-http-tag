@@ -7,6 +7,9 @@ This tag sends dataLayer push data or custom data via GET/POST HTTP request to a
 ---
 
 ### Send dataLayer data
+In addition to the dataLayer data, the tag will send olso:
+page_location, page_hostname, page_path, page_title, page_referrer 
+
 <img alt="cs-http-tag dataLayer push" src="https://user-images.githubusercontent.com/29273232/169644154-3287d8d1-7067-4d23-8093-47b8c46fdd31.png">
 
 
