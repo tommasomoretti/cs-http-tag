@@ -2,11 +2,7 @@
 
 ## Send data everywhere.
 
-This tag sends GET/POST HTTP request to and endpoint. The request payload types are: 
-- dataLayer push
-- Custom data
-
-For debugging, all the actions will be logged in the console.
+This tag sends dataLayer push data or custom data via GET/POST HTTP request to and endpoint. If debugging mode is enable, all the actions that the tag mades will be logged to the console.
 
 ---
 
